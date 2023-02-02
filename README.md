@@ -1,35 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>Homework 27</title>
-    <style>
-      h2 {
-        font-size: 36px;
-        font-weight: bold;
-        text-align: center;
-      }
-      p {
-        font-size: 18px;
-        line-height: 1.5;
-        text-align: justify;
-        margin: 20px 0;
-      }
-      ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-      li {
-        font-size: 18px;
-        line-height: 1.5;
-        margin: 10px 0;
-      }
-      .routes {
-        margin-left: 40px;
-      color: darkgoldenrod;  
-      }
-    </style>
+    <meta charset="utf-8">    
   </head>
   <body>
     <h2 style="color: #26f3ff">Homework 27</h2>
