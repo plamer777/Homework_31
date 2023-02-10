@@ -2,5 +2,7 @@
 from os import path
 # -------------------------------------------------------------------------
 
-ADS_FILE = path.join('data', 'ads.csv')
-CATEGORIES_FILE = path.join('data', 'categories.csv')
+ADS_FILE = path.join('data', 'ad.csv')
+CATEGORIES_FILE = path.join('data', 'category.csv')
+USERS_FILE = path.join('data', 'user.csv')
+LOCATIONS_FILE = path.join('data', 'location.csv')

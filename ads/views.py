@@ -1,10 +1,15 @@
 """This unit contains views processing routes such as ad/, ad/1, cat/, cat/1"""
 import json
+from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import ListView, DetailView
-from ads.models import AdsModel, CategoryModel, AdsSchema, CategorySchema
+from django.views.generic import ListView, DetailView, UpdateView, DeleteView, \
+    CreateView
+from ads.models import Ads, Category, AdsSchema, CategorySchema
+from first_django.settings import ITEMS_PER_PAGE
+from users.models import User
 # ----------------------------------------------------------------------
 
 
@@ -20,7 +25,7 @@ def main_page(request):
 class AdsView(ListView):
     """The AdsView class is a view that serves to work with routes like ad/,
     ad/1"""
-    model = AdsModel
+    model = Ads
 
     def get(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process GET requests
@@ -30,39 +35,34 @@ class AdsView(ListView):
         :return: JsonResponse containing a result of the request
         """
         super().get(request, *args, **kwargs)
-        all_ads = self.object_list
+
+        all_ads = self.object_list.select_related('author').order_by('price')
+        page = int(request.GET.get('page', 1))
+        paginator = Paginator(all_ads, ITEMS_PER_PAGE)
+        current_page = paginator.get_page(page)
 
         ads_list = []
-        for ads in all_ads:
-            ads_list.append(AdsSchema.from_orm(ads).dict(exclude={
-                'description', 'address', 'is_published'}))
+        for ads in current_page:
+            current_ads = {'id': ads.id,
+                           'author': ads.author.first_name,
+                           }
+            current_ads.update(AdsSchema.from_orm(ads).dict())
+            current_ads['image'] = ads.image.url
+            ads_list.append(current_ads)
 
-        return JsonResponse(ads_list, safe=False, json_dumps_params={
+        response = {
+            'items': ads_list,
+            'total': paginator.count,
+            'num_pages': paginator.num_pages
+        }
+
+        return JsonResponse(response, safe=False, json_dumps_params={
             'ensure_ascii': False}, status=200)
-
-    def post(self, request, *args, **kwargs) -> JsonResponse:
-        """This method serves to process POST requests
-        :param request: a request object
-        :param args: positional arguments
-        :param kwargs: keyword arguments
-        :return: JsonResponse containing a result of the request
-        """
-
-        ads_data = json.loads(request.body)
-
-        try:
-            new_ads = AdsModel.objects.create(**ads_data)
-            validated_ads = AdsSchema.from_orm(new_ads).dict()
-            new_ads.save()
-            return JsonResponse(validated_ads, safe=False)
-
-        except Exception as e:
-            return JsonResponse({'error': f'{e}'}, status=422, safe=False)
 
 
 class AdsEntityView(DetailView):
     """This view serves to display information about a single advertisement"""
-    model = AdsModel
+    model = Ads
 
     def get(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process GET requests
@@ -83,9 +83,129 @@ class AdsEntityView(DetailView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+class AdsCreateView(CreateView):
+    """This view serves to add new advertisement into the database"""
+    model = Ads
+    fields = ['name', 'author', 'price', 'image', 'description',
+              'is_published', 'category']
+
+    def post(self, request, *args, **kwargs) -> JsonResponse:
+        """This method serves to process POST requests
+        :param request: a request object
+        :param args: positional arguments
+        :param kwargs: keyword arguments
+        :return: JsonResponse containing a result of the request
+        """
+        ads_data = json.loads(request.body)
+
+        try:
+            validated_ads = AdsSchema(**ads_data)
+            get_object_or_404(User, pk=validated_ads.author_id)
+            get_object_or_404(Category, pk=validated_ads.category_id)
+            new_ads = Ads.objects.create(**validated_ads.dict())
+
+            new_ads.save()
+            response = {'id': new_ads.id,
+                        'author': new_ads.author.first_name}
+            response.update(validated_ads.dict())
+
+            return JsonResponse(response, safe=False)
+
+        except Exception as e:
+            return JsonResponse({'error': f'{e}'}, status=422, safe=False)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AdsUpdateView(UpdateView):
+    """This view serves to update existing advertisement"""
+    model = Ads
+    fields = ['name', 'author', 'price', 'image', 'description',
+              'is_published', 'category']
+
+    def patch(self, request, *args, **kwargs):
+        """This method serves to process PATCH requests
+        :param request: a request object
+        :param args: positional arguments
+        :param kwargs: keyword arguments
+        :return: JsonResponse containing a result of the request
+        """
+        super().post(request, *args, **kwargs)
+        ads_data = json.loads(request.body)
+
+        try:
+            validated_ads = AdsSchema(**ads_data).dict(exclude_none=True)
+            self.object.__dict__.update(validated_ads)
+            self.object.save()
+
+            response = {'id': self.object.id,
+                        'author': self.object.author.first_name}
+            response.update(AdsSchema.from_orm(self.object).dict())
+            response['image'] = self.object.image.url
+
+            return JsonResponse(response, safe=False)
+
+        except Exception as e:
+            return JsonResponse({'error': f'{e}'}, status=422, safe=False)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AdsDeleteView(DeleteView):
+    """This view serves to delete existing advertisement"""
+    model = Ads
+    success_url = '/'
+
+    def delete(self, request, *args, **kwargs):
+        """This method serves to process DELETE requests
+        :param request: a request object
+        :param args: positional arguments
+        :param kwargs: keyword arguments
+        :return: JsonResponse containing a result of the request
+        """
+        super().delete(request, *args, **kwargs)
+        return JsonResponse({'status': 'ok'}, status=200)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AdsImageView(UpdateView):
+    """This view serves to update existing advertisement's image"""
+    model = Ads
+    fields = ['name', 'author', 'price', 'image', 'description',
+              'is_published', 'category']
+
+    def post(self, request, *args, **kwargs):
+        """This method serves to process POST requests
+        :param request: a request object
+        :param args: positional arguments
+        :param kwargs: keyword arguments
+        :return: JsonResponse containing a result of the request
+        """
+        updated_ads = self.get_object()
+        file = request.FILES.get('image')
+        try:
+            updated_ads.image = file
+            updated_ads.save()
+            response = {
+                'id': updated_ads.id,
+                'name': updated_ads.name,
+                'author_id': updated_ads.author_id,
+                'author': updated_ads.author.first_name,
+                'description': updated_ads.description,
+                'price': updated_ads.price,
+                'category_id': updated_ads.category_id,
+                'image': updated_ads.image.url if updated_ads.image else None,
+                'is_published': updated_ads.is_published
+            }
+            return JsonResponse(response, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': e}, status=422)
+# -------------------------------------------------------------------------
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class CategoryView(ListView):
     """This CBV provides access to categories by the route cat/"""
-    model = CategoryModel
+    model = Category
 
     def get(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process GET requests
@@ -95,7 +215,7 @@ class CategoryView(ListView):
         :return: JsonResponse containing a result of the request
         """
         super().get(request, *args, **kwargs)
-        all_categories = self.object_list
+        all_categories = self.object_list.order_by('name')
 
         categories_list = []
         for category in all_categories:
@@ -103,6 +223,34 @@ class CategoryView(ListView):
 
         return JsonResponse(categories_list, safe=False, status=200,
                             json_dumps_params={'ensure_ascii': False})
+
+
+class CategoryEntityView(DetailView):
+    """This view displays a single category found in the database"""
+    model = Category
+
+    def get(self, request, *args, **kwargs) -> JsonResponse:
+        """This method serves to process GET requests
+        :param request: a request object
+        :param args: positional arguments
+        :param kwargs: keyword arguments
+        :return: JsonResponse containing a result of the request
+        """
+        try:
+            category = self.get_object()
+            category_dict = CategorySchema.from_orm(category).dict()
+            return JsonResponse(category_dict, safe=False, status=200,
+                                json_dumps_params={'ensure_ascii': False})
+
+        except Exception as e:
+            return JsonResponse({'error': f'{e}'}, status=404)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CategoryCreateView(CreateView):
+    """This view creates a new category by provided data"""
+    model = Ads
+    fields = ['name']
 
     def post(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process POST requests
@@ -114,32 +262,51 @@ class CategoryView(ListView):
         category_data = json.loads(request.body)
 
         try:
-            new_category = CategoryModel.objects.create(**category_data)
-            validated_category = CategorySchema.from_orm(new_category).dict()
+            validated_category = CategorySchema(**category_data)
+            new_category = Category.objects.create(**validated_category.dict())
             new_category.save()
-            return JsonResponse(validated_category, safe=False, status=200)
+            response = {'id': new_category.id}
+            response.update(validated_category.dict())
+
+            return JsonResponse(response, safe=False, status=200)
 
         except Exception as e:
             return JsonResponse({'error': f'{e}'}, status=422, safe=False)
 
 
-class CategoryEntityView(DetailView):
-    """This view displays a single category found in the database"""
-    model = CategoryModel
+@method_decorator(csrf_exempt, name='dispatch')
+class CategoryUpdateView(UpdateView):
+    """This view update an existing category"""
+    model = Category
+    fields = ['name']
 
-    def get(self, request, *args, **kwargs) -> JsonResponse:
-        """This method serves to process GET requests
+    def patch(self, request, *args, **kwargs):
+        """This method serves to process PATCH requests
         :param request: a request object
         :param args: positional arguments
         :param kwargs: keyword arguments
         :return: JsonResponse containing a result of the request
         """
+        super().post(request, *args, **kwargs)
+        category_data = json.loads(request.body)
 
         try:
-            category = self.get_object()
-            category_dict = CategorySchema.from_orm(category).dict()
-            return JsonResponse(category_dict, safe=False, status=200,
-                                json_dumps_params={'ensure_ascii': False})
+            validated_category = CategorySchema(**category_data)
+            self.object.__dict__.update(validated_category.dict())
+            self.object.save()
 
+            return JsonResponse({'id': self.object.id,
+                                 'name': self.object.name})
         except Exception as e:
-            return JsonResponse({'error': f'{e}'}, status=404)
+            return JsonResponse({'error': f'{e}'})
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CategoryDeleteView(DeleteView):
+    """This view deletes an existing category from the database"""
+    model = Category
+    success_url = '/'
+
+    def delete(self, request, *args, **kwargs):
+        super().delete(request, *args, **kwargs)
+        return JsonResponse({'status': 'ok'}, status=200)
