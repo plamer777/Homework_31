@@ -36,7 +36,7 @@ class AdsView(ListView):
         """
         super().get(request, *args, **kwargs)
 
-        all_ads = self.object_list.select_related('author').order_by('price')
+        all_ads = self.object_list.select_related('author').order_by('-price')
         page = int(request.GET.get('page', 1))
         paginator = Paginator(all_ads, ITEMS_PER_PAGE)
         current_page = paginator.get_page(page)
@@ -47,7 +47,6 @@ class AdsView(ListView):
                            'author': ads.author.first_name,
                            }
             current_ads.update(AdsSchema.from_orm(ads).dict())
-            current_ads['image'] = ads.image.url
             ads_list.append(current_ads)
 
         response = {
@@ -71,10 +70,12 @@ class AdsEntityView(DetailView):
         :param kwargs: keyword arguments
         :return: JsonResponse containing a result of the request
         """
-
         try:
             ads = self.get_object()
-            ads_dict = AdsSchema.from_orm(ads).dict()
+            ads_dict = {'id': ads.id}
+            ads_dict.update(AdsSchema.from_orm(ads).dict())
+            ads_dict['author'] = ads.author.first_name
+
             return JsonResponse(ads_dict, safe=False, status=200,
                                 json_dumps_params={'ensure_ascii': False})
 
@@ -122,7 +123,7 @@ class AdsUpdateView(UpdateView):
     fields = ['name', 'author', 'price', 'image', 'description',
               'is_published', 'category']
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process PATCH requests
         :param request: a request object
         :param args: positional arguments
@@ -140,7 +141,6 @@ class AdsUpdateView(UpdateView):
             response = {'id': self.object.id,
                         'author': self.object.author.first_name}
             response.update(AdsSchema.from_orm(self.object).dict())
-            response['image'] = self.object.image.url
 
             return JsonResponse(response, safe=False)
 
@@ -154,7 +154,7 @@ class AdsDeleteView(DeleteView):
     model = Ads
     success_url = '/'
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process DELETE requests
         :param request: a request object
         :param args: positional arguments
@@ -172,7 +172,7 @@ class AdsImageView(UpdateView):
     fields = ['name', 'author', 'price', 'image', 'description',
               'is_published', 'category']
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process POST requests
         :param request: a request object
         :param args: positional arguments
@@ -186,15 +186,10 @@ class AdsImageView(UpdateView):
             updated_ads.save()
             response = {
                 'id': updated_ads.id,
-                'name': updated_ads.name,
-                'author_id': updated_ads.author_id,
                 'author': updated_ads.author.first_name,
-                'description': updated_ads.description,
-                'price': updated_ads.price,
-                'category_id': updated_ads.category_id,
-                'image': updated_ads.image.url if updated_ads.image else None,
-                'is_published': updated_ads.is_published
             }
+            response.update(AdsSchema.from_orm(updated_ads).dict())
+
             return JsonResponse(response, status=200)
 
         except Exception as e:
@@ -219,7 +214,9 @@ class CategoryView(ListView):
 
         categories_list = []
         for category in all_categories:
-            categories_list.append(CategorySchema.from_orm(category).dict())
+            found_category = {'id': category.id}
+            found_category.update(CategorySchema.from_orm(category).dict())
+            categories_list.append(found_category)
 
         return JsonResponse(categories_list, safe=False, status=200,
                             json_dumps_params={'ensure_ascii': False})
@@ -238,7 +235,8 @@ class CategoryEntityView(DetailView):
         """
         try:
             category = self.get_object()
-            category_dict = CategorySchema.from_orm(category).dict()
+            category_dict = {'id': category.id}
+            category_dict.update(CategorySchema.from_orm(category).dict())
             return JsonResponse(category_dict, safe=False, status=200,
                                 json_dumps_params={'ensure_ascii': False})
 
@@ -280,7 +278,7 @@ class CategoryUpdateView(UpdateView):
     model = Category
     fields = ['name']
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process PATCH requests
         :param request: a request object
         :param args: positional arguments
@@ -307,6 +305,6 @@ class CategoryDeleteView(DeleteView):
     model = Category
     success_url = '/'
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs) -> JsonResponse:
         super().delete(request, *args, **kwargs)
         return JsonResponse({'status': 'ok'}, status=200)

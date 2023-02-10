@@ -36,6 +36,7 @@
       <li>ads - A Django app including views, models</li>
       <li>users - A Django app for user and location tables</li>
       <li>data - csv files with source data</li>
+      <li>fixtures - prepared JSON files to upload data in the database</li>
       <li>media - uploaded images</li>
       <li>first_django - A main Django package</li>
       <li>constants.py - file containing constants such as paths to files</li>

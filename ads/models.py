@@ -1,9 +1,10 @@
 """This file contains models and schemas to get and work with data received
 from a database"""
-from typing import Any
+from typing import Any, Optional
+from django.db.models.fields.files import ImageFieldFile
 from users.models import User
 from django.db import models
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 # -------------------------------------------------------------------------
 
 
@@ -44,10 +45,22 @@ class AdsSchema(BaseModel):
     name: str = None
     author_id: int
     price: int
-    image: Any = None
+    image: Any
     description: str = None
     is_published: bool = False
     category_id: int
+
+    @validator('image')
+    def validate(cls, value: Any) -> Optional[str]:
+        """This method serves to validate the given value and if it is not
+        valid to return appropriate value's type"""
+        if value and isinstance(value, ImageFieldFile):
+            return value.url
+
+        elif type(value) is str:
+            return value
+
+        return None
 
     class Config:
         orm_mode = True

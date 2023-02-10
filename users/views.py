@@ -18,7 +18,7 @@ class UsersView(ListView):
     """
     model = User
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs) -> JsonResponse:
         """
         Handles the GET request for a list of users.
         :param request: the request object
@@ -63,7 +63,7 @@ class SingleUserView(DetailView):
     """
     model = User
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs) -> JsonResponse:
         """
         Handles the GET request for a single user.
         :param request: the request object
@@ -92,7 +92,7 @@ class CreateUserView(CreateView):
     fields = ['first_name', 'last_name', 'username', 'password', 'role',
               'age', 'location']
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs) -> JsonResponse:
         """
         Handle the POST request for creating a user instance
 
@@ -107,15 +107,15 @@ class CreateUserView(CreateView):
         try:
             validated_data = UserSchema(**user_data).dict()
 
-            loc_str = ', '.join(validated_data['location'])
             location, _ = Location.objects.get_or_create(
-                name=loc_str, defaults={'lat': 55.738472, 'lng': 37.610953})
+                name=validated_data['location'], defaults={
+                    'lat': 55.738472, 'lng': 37.610953})
             validated_data['location'] = location
 
             new_user = User.objects.create(**validated_data)
             new_user.save()
 
-            validated_data['location'] = loc_str.split(', ')
+            validated_data['location'] = location.name.split(', ')
             validated_data.pop('password')
 
             response = {'id': new_user.id}
@@ -136,7 +136,7 @@ class UserUpdateView(UpdateView):
     fields = ['first_name', 'last_name', 'username', 'password', 'role',
               'age', 'location']
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs) -> JsonResponse:
         """
         Handle the PATCH request for updating a user instance
 
@@ -180,7 +180,7 @@ class DeleteUserView(DeleteView):
     model = User
     success_url = '/'
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs) -> JsonResponse:
         """
         Handle the DELETE request for deleting a user instance from the
         database
