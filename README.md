@@ -34,6 +34,6 @@
       <li>.gitignore - files and folders to exclude from git repository</li>
       <li>README.md - this file with project info</li>
     </ul>
-    <p style="color: darkblue">The project was created on February 16, 2023.</p>
+    <p style="color: darkblue">The project was created on February 16, 2023 by Aleksey Mavrin</p>
   </body>
 </html>
