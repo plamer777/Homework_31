@@ -37,17 +37,17 @@ class AdsView(ListView):
         """
         super().get(request, *args, **kwargs)
 
-        cat_id = request.GET.get('cat')
+        cat_list = request.GET.getlist('cat')
         price_from = request.GET.get('price_from')
         price_to = request.GET.get('price_to')
         text = request.GET.get('text')
         location = request.GET.get('location')
         page = int(request.GET.get('page', 1))
-
+        print(cat_list)
         all_ads = self.object_list.select_related('author').order_by('-price')
 
-        if cat_id:
-            all_ads = all_ads.filter(category_id=cat_id)
+        if cat_list:
+            all_ads = all_ads.filter(category_id__in=cat_list)
         if text:
             all_ads = all_ads.filter(name__icontains=text)
         if location:
