@@ -1,4 +1,5 @@
-"""This unit contains views processing routes such as ad/, ad/1, cat/, cat/1"""
+"""This unit contains views processing routes such as ad/, ad/1, cat/,
+cat/1 and allows to create, update and delete advertisements and categories"""
 import json
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -23,8 +24,8 @@ def main_page(request):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AdsView(ListView):
-    """The AdsView class is a view that serves to work with routes like ad/,
-    ad/1"""
+    """The AdsView class is a view that serves to work with routes like ad/
+    and also provides filtering by category, price, text and location"""
     model = Ads
 
     def get(self, request, *args, **kwargs) -> JsonResponse:
@@ -36,8 +37,24 @@ class AdsView(ListView):
         """
         super().get(request, *args, **kwargs)
 
-        all_ads = self.object_list.select_related('author').order_by('-price')
+        cat_id = request.GET.get('cat')
+        price_from = request.GET.get('price_from')
+        price_to = request.GET.get('price_to')
+        text = request.GET.get('text')
+        location = request.GET.get('location')
         page = int(request.GET.get('page', 1))
+
+        all_ads = self.object_list.select_related('author').order_by('-price')
+
+        if cat_id:
+            all_ads = all_ads.filter(category_id=cat_id)
+        if text:
+            all_ads = all_ads.filter(name__icontains=text)
+        if location:
+            all_ads = all_ads.filter(author__location__name__icontains=location)
+        if price_from and price_to:
+            all_ads = all_ads.filter(price__range=(price_from, price_to))
+
         paginator = Paginator(all_ads, ITEMS_PER_PAGE)
         current_page = paginator.get_page(page)
 

@@ -25,6 +25,7 @@ urlpatterns = [
     path('', main_page),
     path('', include('ads.urls')),
     path('', include('users.urls')),
+    path('', include('locations.urls')),
 ]
 
 if settings.DEBUG:
