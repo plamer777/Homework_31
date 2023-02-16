@@ -43,7 +43,7 @@ class AdsView(ListView):
         text = request.GET.get('text')
         location = request.GET.get('location')
         page = int(request.GET.get('page', 1))
-        print(cat_list)
+
         all_ads = self.object_list.select_related('author').order_by('-price')
 
         if cat_list:
