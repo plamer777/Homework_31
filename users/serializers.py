@@ -59,6 +59,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         result['location'] = instance.location.name.split(', ')
         return result
 
+    def create(self, validated_data):
+        user = User.objects.create(**validated_data)
+        user.set_password(user.password)
+        user.save()
+
+        return user
+
     class Meta:
         model = User
         exclude = ['password']
@@ -68,7 +75,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     """This class serves to serialize updated user data"""
 
     location = serializers.SlugRelatedField(
-        slug_field='name', queryset=User.objects.all(), required=False)
+        slug_field='name', queryset=Location.objects.all(), required=False)
 
     def to_internal_value(self, data):
         location = ', '.join(data['location'])

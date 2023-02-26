@@ -8,7 +8,13 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, DetailView, UpdateView, DeleteView, \
     CreateView
+from rest_framework.generics import RetrieveAPIView, UpdateAPIView, \
+    DestroyAPIView
+from rest_framework.permissions import IsAuthenticated
+
 from ads.models import Ads, Category, AdsSchema, CategorySchema
+from ads.permissions import IsOwnerPermission, IsAdminModerator
+from ads.serializers import AdsSerializer
 from first_django.settings import ITEMS_PER_PAGE
 from users.models import User
 # ----------------------------------------------------------------------
@@ -76,9 +82,10 @@ class AdsView(ListView):
             'ensure_ascii': False}, status=200)
 
 
-class AdsEntityView(DetailView):
+class AdsEntityView(RetrieveAPIView):
     """This view serves to display information about a single advertisement"""
-    model = Ads
+    queryset = Ads.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process GET requests
@@ -133,43 +140,20 @@ class AdsCreateView(CreateView):
             return JsonResponse({'error': f'{e}'}, status=422, safe=False)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class AdsUpdateView(UpdateView):
+class AdsUpdateView(UpdateAPIView):
     """This view serves to update existing advertisement"""
-    model = Ads
-    fields = ['name', 'author', 'price', 'image', 'description',
-              'is_published', 'category']
-
-    def patch(self, request, *args, **kwargs) -> JsonResponse:
-        """This method serves to process PATCH requests
-        :param request: a request object
-        :param args: positional arguments
-        :param kwargs: keyword arguments
-        :return: JsonResponse containing a result of the request
-        """
-        super().post(request, *args, **kwargs)
-        ads_data = json.loads(request.body)
-
-        try:
-            validated_ads = AdsSchema(**ads_data).dict(exclude_none=True)
-            self.object.__dict__.update(validated_ads)
-            self.object.save()
-
-            response = {'id': self.object.id,
-                        'author': self.object.author.first_name}
-            response.update(AdsSchema.from_orm(self.object).dict())
-
-            return JsonResponse(response, safe=False)
-
-        except Exception as e:
-            return JsonResponse({'error': f'{e}'}, status=422, safe=False)
+    queryset = Ads.objects.all()
+    serializer_class = AdsSerializer
+    permission_classes = [IsAuthenticated,
+                          IsOwnerPermission | IsAdminModerator]
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class AdsDeleteView(DeleteView):
+class AdsDeleteView(DestroyAPIView):
     """This view serves to delete existing advertisement"""
-    model = Ads
-    success_url = '/'
+    queryset = Ads.objects.all()
+    permission_classes = [IsAuthenticated,
+                          IsOwnerPermission | IsAdminModerator]
 
     def delete(self, request, *args, **kwargs) -> JsonResponse:
         """This method serves to process DELETE requests

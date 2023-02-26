@@ -13,6 +13,7 @@ pydantic = "^1.10.4"
 psycopg2-binary = "^2.9.5"
 pillow = "^9.4.0"
 djangorestframework = "^3.14.0"
+djangorestframework-simplejwt = "^5.2.2"
 
 
 [build-system]
