@@ -13,6 +13,7 @@ class User(AbstractUser):
     ROLES = [(MEMBER, MEMBER), (MODERATOR, MODERATOR), (ADMIN, ADMIN)]
     role = models.CharField(max_length=9, choices=ROLES)
     age = models.IntegerField(null=True)
+    birth_date = models.DateField()
     location = models.ForeignKey('locations.location', on_delete=models.CASCADE,
                                  null=True, blank=True)
 

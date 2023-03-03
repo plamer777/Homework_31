@@ -1,6 +1,8 @@
 """This file contains models and schemas to get and work with data received
 from a database"""
 from typing import Any, Optional
+from django.core.exceptions import ValidationError
+from django.core.validators import MinLengthValidator, MinValueValidator
 from django.db.models.fields.files import ImageFieldFile
 from users.models import User
 from django.db import models
@@ -11,6 +13,7 @@ from pydantic import BaseModel, validator
 class Category(models.Model):
     """This class represents a category model"""
     id = models.AutoField(primary_key=True)
+    slug = models.SlugField(unique=True)
     name = models.CharField(max_length=30)
 
     def __str__(self):
@@ -24,12 +27,15 @@ class Category(models.Model):
 class Ads(models.Model):
     """This class represents an advertisement model"""
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=80, null=True, blank=True)
+    name = models.CharField(max_length=80,
+                            null=False,
+                            blank=False,
+                            validators=[MinLengthValidator(10)])
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-    price = models.IntegerField()
+    price = models.IntegerField(validators=[MinValueValidator(0)])
     image = models.ImageField(upload_to='images/', null=True, blank=True)
     description = models.CharField(max_length=800, null=True, blank=True)
-    is_published = models.BooleanField(default=False)
+    is_published = models.BooleanField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
@@ -47,7 +53,7 @@ class AdsSchema(BaseModel):
     price: int
     image: Any
     description: str = None
-    is_published: bool = False
+    is_published: bool
     category_id: int
 
     @validator('image')
@@ -59,7 +65,6 @@ class AdsSchema(BaseModel):
 
         elif type(value) is str:
             return value
-
         return None
 
     class Config:
@@ -69,6 +74,14 @@ class AdsSchema(BaseModel):
 class CategorySchema(BaseModel):
     """This class is a schema to serialize and deserialize Category models"""
     name: str
+    slug: str
+
+    @validator('slug')
+    def validate(cls, value: Any):
+        if 5 <= len(value) <= 10:
+            return value
+        raise ValidationError('Invalid length of slug field, '
+                              'from 5 to 10 expected')
 
     class Config:
         orm_mode = True

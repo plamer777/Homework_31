@@ -39,4 +39,5 @@ class SelectionView(ModelViewSet):
     def get_permissions(self):
         permissions = [permission() for permission in self.permissions.get(
             self.action, self.default_permissions)]
+
         return permissions

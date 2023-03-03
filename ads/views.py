@@ -3,20 +3,17 @@ cat/1 and allows to create, update and delete advertisements and categories"""
 import json
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, DetailView, UpdateView, DeleteView, \
     CreateView
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView, \
-    DestroyAPIView
+    DestroyAPIView, CreateAPIView
 from rest_framework.permissions import IsAuthenticated
-
 from ads.models import Ads, Category, AdsSchema, CategorySchema
 from ads.permissions import IsOwnerPermission, IsAdminModerator
-from ads.serializers import AdsSerializer
+from ads.serializers import AdsSerializer, AdsCreateSerializer
 from first_django.settings import ITEMS_PER_PAGE
-from users.models import User
 # ----------------------------------------------------------------------
 
 
@@ -70,6 +67,7 @@ class AdsView(ListView):
                            'author': ads.author.first_name,
                            }
             current_ads.update(AdsSchema.from_orm(ads).dict())
+            current_ads['category'] = current_ads.pop('category_id')
             ads_list.append(current_ads)
 
         response = {
@@ -99,6 +97,7 @@ class AdsEntityView(RetrieveAPIView):
             ads_dict = {'id': ads.id}
             ads_dict.update(AdsSchema.from_orm(ads).dict())
             ads_dict['author'] = ads.author.first_name
+            ads_dict['category'] = ads_dict.pop('category_id', None)
 
             return JsonResponse(ads_dict, safe=False, status=200,
                                 json_dumps_params={'ensure_ascii': False})
@@ -107,37 +106,10 @@ class AdsEntityView(RetrieveAPIView):
             return JsonResponse({'error': f'{e}'}, status=404)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class AdsCreateView(CreateView):
+class AdsCreateView(CreateAPIView):
     """This view serves to add new advertisement into the database"""
-    model = Ads
-    fields = ['name', 'author', 'price', 'image', 'description',
-              'is_published', 'category']
-
-    def post(self, request, *args, **kwargs) -> JsonResponse:
-        """This method serves to process POST requests
-        :param request: a request object
-        :param args: positional arguments
-        :param kwargs: keyword arguments
-        :return: JsonResponse containing a result of the request
-        """
-        ads_data = json.loads(request.body)
-
-        try:
-            validated_ads = AdsSchema(**ads_data)
-            get_object_or_404(User, pk=validated_ads.author_id)
-            get_object_or_404(Category, pk=validated_ads.category_id)
-            new_ads = Ads.objects.create(**validated_ads.dict())
-
-            new_ads.save()
-            response = {'id': new_ads.id,
-                        'author': new_ads.author.first_name}
-            response.update(validated_ads.dict())
-
-            return JsonResponse(response, safe=False)
-
-        except Exception as e:
-            return JsonResponse({'error': f'{e}'}, status=422, safe=False)
+    queryset = Ads.objects.all()
+    serializer_class = AdsCreateSerializer
 
 
 class AdsUpdateView(UpdateAPIView):
