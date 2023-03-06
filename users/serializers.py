@@ -70,10 +70,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """This class serves to serialize newly added user"""
     id = serializers.IntegerField(required=False)
     birth_date = serializers.DateField()
+    email = serializers.EmailField(validators=[is_email_unique, IsAgeValid()])
     location = serializers.SlugRelatedField(
         slug_field='name', queryset=User.objects.all(), required=False)
 
     def to_internal_value(self, data):
+        super().to_internal_value(data)
         location_name = ', '.join(data['location'])
         created, _ = Location.objects.get_or_create(name=location_name)
         data['location'] = created
@@ -85,12 +87,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         result.pop('password', None)
         return result
 
-    def validate(self, attrs):
-        IsAgeValid()(attrs.get('birth_date', date.today()))
-        is_email_unique(attrs.get('email', 'default@google.com'))
-        if not attrs.get('password'):
-            raise ValidationError({"password": "Password is required"})
-        return attrs
+    # def validate(self, attrs):
+    #     IsAgeValid()(attrs.get('birth_date', date.today()))
+    #     is_email_unique(attrs.get('email', 'default@google.com'))
+    #     if not attrs.get('password'):
+    #         raise ValidationError({"password": "Password is required"})
+    #     return attrs
 
     def create(self, validated_data):
         user = User.objects.create(**validated_data)

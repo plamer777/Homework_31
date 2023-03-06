@@ -1,7 +1,6 @@
 """This file contains models and schemas to get and work with data received
 from a database"""
 from typing import Any, Optional
-from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator, MinValueValidator
 from django.db.models.fields.files import ImageFieldFile
 from users.models import User
@@ -13,7 +12,8 @@ from pydantic import BaseModel, validator
 class Category(models.Model):
     """This class represents a category model"""
     id = models.AutoField(primary_key=True)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(unique=True, max_length=10,
+                            validators=[MinLengthValidator(5)])
     name = models.CharField(max_length=30)
 
     def __str__(self):
@@ -75,13 +75,6 @@ class CategorySchema(BaseModel):
     """This class is a schema to serialize and deserialize Category models"""
     name: str
     slug: str
-
-    @validator('slug')
-    def validate(cls, value: Any):
-        if 5 <= len(value) <= 10:
-            return value
-        raise ValidationError('Invalid length of slug field, '
-                              'from 5 to 10 expected')
 
     class Config:
         orm_mode = True

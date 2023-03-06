@@ -2,7 +2,7 @@
 advertisement models"""
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from ads.models import Ads
+from ads.models import Ads, Category
 from users.models import User
 # -------------------------------------------------------------------------
 
@@ -46,3 +46,11 @@ class AdsCreateSerializer(serializers.ModelSerializer):
         data['author'] = author.first_name if author else None
         data['category'] = category.name if category else None
         return data
+
+
+class CategoryCreateSerializer(serializers.ModelSerializer):
+    """The CategoryCreateSerializer class serves to work with
+    CategoryCreateView"""
+    class Meta:
+        model = Category
+        fields = '__all__'

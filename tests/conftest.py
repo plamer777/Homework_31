@@ -4,9 +4,9 @@ from pytest_factoryboy import register
 from tests.factories import AdsFactory, CategoryFactory, UserFactory
 # --------------------------------------------------------------------------
 
-register(AdsFactory)
 register(UserFactory)
 register(CategoryFactory)
+register(AdsFactory)
 
 
 @pytest.mark.django_db

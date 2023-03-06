@@ -12,7 +12,8 @@ from rest_framework.generics import RetrieveAPIView, UpdateAPIView, \
 from rest_framework.permissions import IsAuthenticated
 from ads.models import Ads, Category, AdsSchema, CategorySchema
 from ads.permissions import IsOwnerPermission, IsAdminModerator
-from ads.serializers import AdsSerializer, AdsCreateSerializer
+from ads.serializers import AdsSerializer, AdsCreateSerializer, \
+    CategoryCreateSerializer
 from first_django.settings import ITEMS_PER_PAGE
 # ----------------------------------------------------------------------
 
@@ -217,32 +218,10 @@ class CategoryEntityView(DetailView):
             return JsonResponse({'error': f'{e}'}, status=404)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class CategoryCreateView(CreateView):
+class CategoryCreateView(CreateAPIView):
     """This view creates a new category by provided data"""
-    model = Ads
-    fields = ['name']
-
-    def post(self, request, *args, **kwargs) -> JsonResponse:
-        """This method serves to process POST requests
-        :param request: a request object
-        :param args: positional arguments
-        :param kwargs: keyword arguments
-        :return: JsonResponse containing a result of the request
-        """
-        category_data = json.loads(request.body)
-
-        try:
-            validated_category = CategorySchema(**category_data)
-            new_category = Category.objects.create(**validated_category.dict())
-            new_category.save()
-            response = {'id': new_category.id}
-            response.update(validated_category.dict())
-
-            return JsonResponse(response, safe=False, status=200)
-
-        except Exception as e:
-            return JsonResponse({'error': f'{e}'}, status=422, safe=False)
+    queryset = Category.objects.all()
+    serializer_class = CategoryCreateSerializer
 
 
 @method_decorator(csrf_exempt, name='dispatch')
